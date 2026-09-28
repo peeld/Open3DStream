@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION  3.13)
 
 project(Open3DStreamLib)
 
-find_package(flatbuffers CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../usr)
+find_package(Flatbuffers CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../usr)
 find_package(nng CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../usr)
 
 add_custom_command(
