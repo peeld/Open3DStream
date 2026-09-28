@@ -1,6 +1,5 @@
 *.bak
 *.zip
-include
 lib
 build_release
 vsbuild
