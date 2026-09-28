@@ -3,6 +3,7 @@ project(O3DS3rdParty)
 
 set(CMAKE_DEBUG_POSTFIX d)
 
+# add_subdirectory(mbedtls)
 add_subdirectory(flatbuffers)
 add_subdirectory(nng)
 add_subdirectory(crccpp)

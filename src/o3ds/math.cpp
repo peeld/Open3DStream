@@ -28,3 +28,64 @@ double O3DS::rad(double deg)
 {
 	return deg * 3.14159265358979323846 / 180.0;
 };
+
+O3DS::Matrix  O3DS::rotateX(double a)
+{
+	Eigen::AngleAxisd r(a, Eigen::Vector3d::UnitX());
+	return Eigen::Affine3d(r).matrix();
+};
+
+O3DS::Matrix  O3DS::rotateY(double a)
+{
+	Eigen::AngleAxisd r(a, Eigen::Vector3d::UnitY());
+	return Eigen::Affine3d(r).matrix();
+};
+
+O3DS::Matrix  O3DS::rotateZ(double a)
+{
+	Eigen::AngleAxisd r(a, Eigen::Vector3d::UnitZ());
+	return Eigen::Affine3d(r).matrix();
+};
+
+O3DS::Matrix  O3DS::fromQuaternion(const Eigen::Quaterniond& q)
+{
+	Eigen::Matrix3d R = q.toRotationMatrix();
+	Eigen::Matrix4d M = Eigen::Matrix4d::Identity();
+	M.block<3, 3>(0, 0) = R;
+	return M;
+};
+
+Eigen::Quaterniond O3DS::toQuaternion(const Matrix& m)
+{
+	Eigen::Matrix3d r = m.block<3, 3>(0, 0);
+	Eigen::Quaterniond q(r);
+	q.normalize();   // normalize the quaternion, NOT the matrix
+	return q;
+}
+
+O3DS::Matrix  O3DS::scale(const Eigen::Vector3d& s)
+{
+	O3DS::Matrix  m = Matrix::Identity();
+	m(0, 0) = s.x();
+	m(1, 1) = s.y();
+	m(2, 2) = s.z();
+	return m;
+};
+
+O3DS::Matrix  O3DS::translate(double tx, double ty, double tz)
+{
+	Matrix  m = Matrix::Identity();
+	m(0, 3) = tx;
+	m(1, 3) = ty;
+	m(2, 3) = tz;
+	return m;
+};
+
+O3DS::Matrix  O3DS::translate(const Eigen::Vector3d& value)
+{
+	O3DS::Matrix  m = Matrix::Identity();
+	m(0, 3) = value.x();
+	m(1, 3) = value.y();
+	m(2, 3) = value.z();
+	return m;
+};

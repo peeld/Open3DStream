@@ -26,16 +26,25 @@ SOFTWARE.
 
 namespace O3DS
 {
-	
-	bool AsyncPublisher::start(const char *url)
+	bool AsyncPublisher::open()
 	{
 		int ret;
 
 		ret = nng_pub0_open(&mSocket);
-		NNG_ERROR("Creating publish scocket");
+		NNG_ERROR("Creating publish socket");
 
-		if ((ret = nng_listen(mSocket, url, NULL, 0)) < 0) {
-			setError("Could not listen", ret);
+		return true;
+	}
+
+	bool AsyncPublisher::start(const char *url)
+	{
+		if (!open())
+		{
+			return false;
+		}
+
+		if (!startListener(url, nullptr))
+		{
 			return false;
 		}
 
@@ -44,4 +53,45 @@ namespace O3DS
 		return true;
 	}
 
+	bool AsyncPublisher::startListener(const char* url, nng_tls_config* tlsConfig)
+	{
+		int ret;
+
+		ret = nng_listener_create(&mListenerHandle, mSocket, url);
+		NNG_ERROR("Could not create publish listener");
+
+		if (tlsConfig != nullptr)
+		{
+			ret = nng_listener_set_ptr(mListenerHandle, NNG_OPT_TLS_CONFIG, tlsConfig);
+			NNG_ERROR("Could not attach TLS config to publish listener");
+		}
+
+		ret = nng_listener_start(mListenerHandle, 0);
+		NNG_ERROR("Could not start publish listener");
+
+		mHasListener = true;
+		mState = Connector::STARTED;
+
+		return true;
+	}
+
+	void AsyncPublisher::closeListener()
+	{
+		if (mHasListener)
+		{
+			nng_listener_close(mListenerHandle);
+			mListenerHandle = NNG_LISTENER_INITIALIZER;
+			mHasListener = false;
+		}
+	}
+
+	bool AsyncPublisher::notifyPipeEvent(nng_pipe_ev event, nng_pipe_cb callback, void* context)
+	{
+		int ret;
+
+		ret = nng_pipe_notify(mSocket, event, callback, context);
+		NNG_ERROR("Could not register pipe notify callback");
+
+		return true;
+	}
 }

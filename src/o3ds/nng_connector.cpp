@@ -26,6 +26,8 @@ SOFTWARE.
 
 #include <string>
 #include <string.h>
+#include <chrono>
+#include <thread>
 #include "nng/nng.h"
 
 
@@ -97,44 +99,50 @@ namespace O3DS
 		return msglen;
 	}
 
+
 	size_t BlockingNngConnector::read(char** data, size_t* len)
 	{
-		if (data == nullptr || len == nullptr)
-		{
-			Connector::setError("Invalid parameter");
-			return 0;
-		}
+	    if (data == nullptr || len == nullptr)
+	    {
+		Connector::setError("Invalid parameter");
+		return 0;
+	    }
 
-		int ret;
+	    int ret;
+	    nng_msg* msg = nullptr;
 
-		nng_msg* msg = nullptr;
+	    ret = nng_recvmsg(mSocket, &msg, 0);
+	    NNG_ERROR("Receiving message");
 
-		ret = nng_recvmsg(mSocket, &msg, 0);
-		NNG_ERROR("Receiving message");
+	    size_t msglen = nng_msg_len(msg);
+	    
+	    // Ensure data buffer is properly allocated
+	    if (*data == nullptr) {
+		*data = (char*)malloc(msglen);
+		if (!*data) return 0; // Memory allocation failure
+	    } else if (msglen > *len) {
+		char* buf = (char*)realloc(*data, msglen);
+		if (!buf) return 0; // Memory allocation failure
+		*data = buf;
+	    }
 
-		size_t msglen = nng_msg_len(msg);
-		if (msglen > *len)
-		{
-			char* buf = (char*)realloc(*data, msglen);
-			if (!buf) return 0;
-			*len = msglen;
-		}
+	    *len = msglen;  // Update length
 
-		void* msgBody = nng_msg_body(msg);
-		if (!msgBody)
-		{
-			Connector::setError("Invalid Message");
-			nng_msg_free(msg);
-			return false;
-		}
-
-		memcpy(*data, msgBody, msglen);
-
+	    void* msgBody = nng_msg_body(msg);
+	    if (!msgBody)
+	    {
+		Connector::setError("Invalid Message");
 		nng_msg_free(msg);
+		return 0;
+	    }
 
-		return msglen;
+	    memcpy(*data, msgBody, msglen);  // Safe memcpy after fixing allocation
 
+	    nng_msg_free(msg);
+
+	    return msglen;
 	}
+
 
 	/*  ASYNC */
 
@@ -172,10 +180,33 @@ namespace O3DS
 		ret = nng_msg_append(msg, data, len);
 		NNG_ERROR("Creating message")
 
+		// A pair1 pipe only has room for one outstanding send until the
+		// previous one has actually gone out on the wire, so a nonblocking
+		// send made immediately after another on the same pipe (e.g. the
+		// backplane's auth message followed straight away by its startup
+		// report - see RelayBackplane::connectOnce()) can hit NNG_EAGAIN
+		// even though the connection itself is perfectly healthy. That's
+		// ordinary backpressure, not a dead connection, so retry briefly
+		// instead of tearing the whole thing down on it (NNG_ERROR below
+		// still treats every other nonzero return as fatal, same as
+		// before). On failure nng_sendmsg leaves msg owned by the caller
+		// (per its docs), so the same msg is safe to resend as-is.
+		for (int attempt = 0; attempt < 50; ++attempt)
+		{
 			ret = nng_sendmsg(mSocket, msg, NNG_FLAG_NONBLOCK);
+			if (ret != NNG_EAGAIN)
+			{
+				break;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(2));
+		}
+		if (ret == NNG_EAGAIN)
+		{
+			nng_msg_free(msg);
+		}
 		NNG_ERROR("Sending message")
 
-			return true;
+		return true;
 	}
 
 
@@ -267,7 +298,7 @@ namespace O3DS
 		// Only calls nng_recv_aio if the message was okay.
 		int ret;
 
-		std::lock_guard<std::mutex> guard(mutex);
+		// std::lock_guard<std::mutex> guard(mutex);
 
 		ret = nng_aio_result(aio);
 		if (ret != 0)
@@ -278,6 +309,9 @@ namespace O3DS
 		}
 
 		nng_msg* msg = nng_aio_get_msg(aio);
+
+		nng_recv_aio(mSocket, aio);
+
 		if (msg == nullptr)
 		{
 			Connector::setError("No message wile doing an async read");
@@ -285,11 +319,12 @@ namespace O3DS
 			return false;
 		}
 
-		if (mInDataFunc) mInDataFunc(mContext, nng_msg_body(msg), nng_msg_len(msg));
+		void* data = nng_msg_body(msg);
+		size_t sz = nng_msg_len(msg);
+
+		if (data && sz> 0 && mInDataFunc) mInDataFunc(mContext, data , sz);
 
 		nng_msg_free(msg);
-
-		nng_recv_aio(mSocket, aio);
 
 		mState = Connector::READING;
 
