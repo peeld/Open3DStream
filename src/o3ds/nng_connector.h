@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <mutex>
 #include "base_connector.h"
 #include "nng/nng.h"
@@ -86,7 +87,19 @@ namespace O3DS
 		size_t       read(char** data, size_t* len) override;       //!< Read bytes, resize data if needed
 		bool         asyncReadMsg();                          //!< handles a nng_recv_aio call.  Calls nng_recv_aio again if message was okay and returns true
 		void         stop();
+
+		//! Configure TLS-PSK for a dialing (client) connector.  Must be called
+		//! before start(), and only has an effect for tls+tcp:// urls.  The key
+		//! is raw bytes (not hex).  Clears any previous setting if identity is empty.
+		void         setTlsPsk(const std::string& identity, const std::vector<uint8_t>& key);
 	protected:
+		//! Builds a client mode nng_tls_config from setTlsPsk() and attaches it to
+		//! the (created, not yet started) dialer.  Returns 0 if no PSK was set.
+		int          applyTlsPsk(nng_dialer dialer);
+
+		std::string          mPskIdentity;
+		std::vector<uint8_t> mPskKey;
+
 		nng_dialer mDialer;
 		nng_aio* aio;
 

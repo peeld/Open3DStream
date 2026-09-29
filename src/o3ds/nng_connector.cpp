@@ -27,6 +27,7 @@ SOFTWARE.
 #include <string>
 #include <string.h>
 #include "nng/nng.h"
+#include "nng/supplemental/tls/tls.h"
 
 
 namespace O3DS
@@ -154,6 +155,30 @@ namespace O3DS
 		nng_dialer_close(mDialer);
 		if (aio) nng_aio_stop(aio);
 		aio = nullptr;
+	}
+
+	void AsyncNngConnector::setTlsPsk(const std::string& identity, const std::vector<uint8_t>& key)
+	{
+		mPskIdentity = identity;
+		mPskKey = key;
+	}
+
+	int AsyncNngConnector::applyTlsPsk(nng_dialer dialer)
+	{
+		if (mPskIdentity.empty() || mPskKey.empty())
+			return 0;
+
+		nng_tls_config* cfg = nullptr;
+		int ret = nng_tls_config_alloc(&cfg, NNG_TLS_MODE_CLIENT);
+		if (ret != 0) return ret;
+
+		ret = nng_tls_config_psk(cfg, mPskIdentity.c_str(), mPskKey.data(), mPskKey.size());
+		if (ret == 0)
+			ret = nng_dialer_set_ptr(dialer, NNG_OPT_TLS_CONFIG, cfg);
+
+		// The dialer holds its own reference once set; drop ours either way.
+		nng_tls_config_free(cfg);
+		return ret;
 	}
 
 	void AsyncNngConnector::setError(const char* msg, int ret)

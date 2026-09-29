@@ -31,13 +31,35 @@ namespace O3DS
 		int ret;
 
 		ret = nng_push0_open(&mSocket);
-		if (ret != 0) { return false; }
+		if (ret != 0) { setError("Pipeline push open", ret); return false; }
 
 		ret = nng_aio_alloc(&aio, AsyncPipeline::Callback, this);
-		if (ret != 0) { return false; }
+		if (ret != 0) { setError("Pipeline push aio alloc", ret); return false; }
 
-		ret = nng_dial(mSocket, url, 0, 0);
-		if (ret != 0) { return false; }
+		// Create the dialer separately (rather than nng_dial) so a TLS-PSK
+		// config can be attached before it starts.
+		ret = nng_dialer_create(&mDialer, mSocket, url);
+		if (ret != 0) { setError("Pipeline push dialer create", ret); return false; }
+
+		ret = applyTlsPsk(mDialer);
+		if (ret != 0) { setError("Pipeline push TLS-PSK config", ret); return false; }
+
+		// Blocking start, same as nng_dial(..., 0): returns the result of the
+		// first connection attempt (NNG_ECRYPTO on a failed TLS handshake).
+		ret = nng_dialer_start(mDialer, 0);
+		if (ret != 0)
+		{
+			setError("Pipeline push dial", ret);
+			// A failed start leaves a socket, dialer and aio behind, and the caller
+			// retries start() on a timer - release them so retries do not leak.
+			nng_dialer_close(mDialer);
+			mDialer = NNG_DIALER_INITIALIZER;
+			nng_aio_free(aio);
+			aio = nullptr;
+			nng_close(mSocket);
+			mSocket = NNG_SOCKET_INITIALIZER;
+			return false;
+		}
 
 		nng_recv_aio(mSocket, aio);
 

@@ -39,6 +39,9 @@ bool AsyncSubscriber::start(const char *url)
 	ret = nng_dialer_create(&mDialer, mSocket, url);
 	NNG_ERROR("Creating dialer")
 
+	ret = applyTlsPsk(mDialer);
+	NNG_ERROR("Applying TLS-PSK config")
+
 	ret = nng_pipe_notify(mSocket, nng_pipe_ev::NNG_PIPE_EV_ADD_POST,  AsyncSubscriber::pipeEvent, this);
 	NNG_ERROR("Setting pipe notify")
 
