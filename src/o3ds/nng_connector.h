@@ -29,6 +29,7 @@ SOFTWARE.
 #include <vector>
 #include <cstdint>
 #include <mutex>
+#include <atomic>
 #include "base_connector.h"
 #include "nng/nng.h"
 
@@ -88,6 +89,9 @@ namespace O3DS
 		bool         asyncReadMsg();                          //!< handles a nng_recv_aio call.  Calls nng_recv_aio again if message was okay and returns true
 		void         stop();
 
+		//! Messages write() dropped because nng reported back-pressure (NNG_EAGAIN).
+		uint64_t     droppedCount() const { return mDropped.load(std::memory_order_relaxed); }
+
 		//! Configure TLS-PSK for a dialing (client) connector.  Must be called
 		//! before start(), and only has an effect for tls+tcp:// urls.  The key
 		//! is raw bytes (not hex).  Clears any previous setting if identity is empty.
@@ -106,6 +110,7 @@ namespace O3DS
 		nng_socket mSocket;
 		std::mutex  mutex;
 		nng_ctx  ctx;
+		std::atomic<uint64_t> mDropped{ 0 };
 	};
 }
 

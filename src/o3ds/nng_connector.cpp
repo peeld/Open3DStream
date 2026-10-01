@@ -201,10 +201,23 @@ namespace O3DS
 		NNG_ERROR("Message alloc");
 
 		ret = nng_msg_append(msg, data, len);
-		NNG_ERROR("Creating message")
+		if (ret != 0) { nng_msg_free(msg); setError("Creating message", ret); return false; }
 
 		ret = nng_sendmsg(mSocket, msg, NNG_FLAG_NONBLOCK);
-		NNG_ERROR("Sending message")
+		if (ret != 0)
+		{
+			// nng only takes ownership of the message on success.
+			nng_msg_free(msg);
+
+			// NNG_EAGAIN is back-pressure (send queue full or no peer pipe ready
+			// yet), not a dead connection: drop this message and report success so
+			// callers do not tear down and rebuild a healthy socket. nng
+			// redials by itself after a real disconnect.
+			if (ret == NNG_EAGAIN) { mDropped.fetch_add(1, std::memory_order_relaxed); return true; }
+
+			setError("Sending message", ret);
+			return false;
+		}
 
 		return true;
 	}
