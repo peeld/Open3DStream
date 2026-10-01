@@ -33,6 +33,13 @@ namespace O3DS
 		ret = nng_push0_open(&mSocket);
 		if (ret != 0) { setError("Pipeline push open", ret); return false; }
 
+		// Queue up to this many messages when the connection is momentarily not ready
+		// for one. The default is an unbuffered socket, where the non-blocking write()
+		// drops a message (NNG_EAGAIN) whenever the writer is busy with the previous
+		// one - about 1-3% of a 120 msg/s stream. Best effort: if it is refused the
+		// socket still works, unbuffered.
+		nng_socket_set_int(mSocket, NNG_OPT_SENDBUF, 64);
+
 		ret = nng_aio_alloc(&aio, AsyncPipeline::Callback, this);
 		if (ret != 0) { setError("Pipeline push aio alloc", ret); return false; }
 
