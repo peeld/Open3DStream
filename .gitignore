@@ -4,6 +4,7 @@ include
 lib
 build_release
 vsbuild
+src/o3ds_generated.h
 
 # Visual Studio 2015 user specific files
 .vs/
