@@ -1218,6 +1218,10 @@ namespace O3DS
 		BuilderSet* builders,
 		bool clearInactive)
 	{
+		// Cleared before anything can fail, so a rejected packet reports that it
+		// carried nothing rather than the previous packet's subjects.
+		mPacketUuids.clear();
+
 		if (data == nullptr) {
 			mError = "Nullptr passed as data to parse";
 			return false;
@@ -1346,6 +1350,7 @@ namespace O3DS
 				JointBuilder* builder = nullptr;
 				if (builders) { builder = builders->joint; }
 				outPerformer->parse(performer, builder);
+				mPacketUuids.insert(subjectUuid);
 			}
 		}
 
@@ -1360,6 +1365,7 @@ namespace O3DS
 				PerformerSubject* outSubject = this->findSubjectByUuid<PerformerSubject>(uuid);
 				if (outSubject) {
 					outSubject->parseUpdate(inUpdate);
+					mPacketUuids.insert(uuid);
 				}
 			}
 		}
@@ -1376,6 +1382,7 @@ namespace O3DS
 				RigidbodyBuilder* builder = nullptr;
 				if (builders) { builder = builders->rigidbody; }
 				outRigidbody->parse(rigidbody, builder);
+				mPacketUuids.insert(subjectUuid);
 			}
 		}
 
@@ -1390,6 +1397,7 @@ namespace O3DS
 				RigidbodySubject* outSubject = this->findSubjectByUuid<RigidbodySubject>(uuid);
 				if (outSubject) {
 					outSubject->parseUpdate(inUpdate);
+					mPacketUuids.insert(uuid);
 				}
 			}
 		}
@@ -1404,6 +1412,7 @@ namespace O3DS
 				CameraBuilder* builder = nullptr;
 				if (builders) { builder = builders->camera; }
 				camera->parse(oCamera, builder);
+				mPacketUuids.insert(uuid);
 			}
 		}
 
@@ -1417,6 +1426,7 @@ namespace O3DS
 				auto camera = this->findSubjectByUuid<CameraSubject>(uuid);
 				if (camera) {
 					camera->parseUpdate(inCam);
+					mPacketUuids.insert(uuid);
 				}
 			}
 		}

@@ -78,7 +78,7 @@ namespace O3DS
 	{
 		char* p = (char*)buf;
 		for (size_t i = 0; i < len; i++)
-			this->push_back(p	[i]);
+			this->push_back(p[i]);
 	}
 
 	void BinaryStream::get(uint8_t& value, const char* msg)

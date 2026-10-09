@@ -28,6 +28,7 @@ SOFTWARE.
 #include <vector>
 #include <deque>
 #include <string>
+#include <unordered_set>
 #include <cstdint>
 
 #include "context.h"
@@ -563,6 +564,13 @@ namespace O3DS
 
 		//! Error string from last parse
 		std::string mError;
+
+		//! The uuids of the subjects the last parse() actually carried (full or
+		//! update).  mItems keeps every subject ever seen, so "held" is not
+		//! "in this packet" - and a sender that puts one subject per packet
+		//! needs a receiver that can tell the two apart.  Empty after a failed
+		//! parse.
+		std::unordered_set<std::string> mPacketUuids;
 
 		//! Encode all of the items in the subject list as binary data
 		[[nodiscard]] bool serialize(std::vector<char> &outbuf, double timestamp=0.0, const std::string& timcode = std::string());
