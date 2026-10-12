@@ -5,7 +5,7 @@ set(AppName Test1)
 project(${AppName}Project)
 
 find_package(nng CONFIG REQUIRED)
-find_package(flatbuffers CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../../usr) 
+find_package(Flatbuffers CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../../usr) 
 
 add_executable(${AppName} 
 	main.cpp 
@@ -20,13 +20,16 @@ add_executable(${AppName}
 	../../src/o3ds/context.cpp	
 )
 
+add_dependencies(${AppName} protocol)
+
 set_target_properties(${AppName} PROPERTIES DEBUG_POSTFIX d )
 
 target_link_libraries(${AppName}  PRIVATE  ${NNG_LIBRARY}) 
 
 target_include_directories(${AppName} PUBLIC 
 	${CMAKE_CURRENT_LIST_DIR}/spdlog/include 
-	../../thirdparty/Eigen
+	${CMAKE_BINARY_DIR}/src/_generated
+	../../thirdparty/eigen
 	../../thirdparty/crccpp/inc
 	../../src)
 

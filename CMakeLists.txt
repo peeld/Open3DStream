@@ -9,6 +9,9 @@ project(Open3DStream VERSION)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_DEBUG_POSTFIX d)
 
+# nng's TLS support is built on mbedtls; nng's exported targets depend on it
+find_package(MbedTLS CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/usr)
+
 # Version 1.0.6  Subject::parse() clears its own transform list. It is a
 #                receiver-side fix, not a wire change: SubjectList::parse()
 #                cleared performers and rigidbodies at the call site and never

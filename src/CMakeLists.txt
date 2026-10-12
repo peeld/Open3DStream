@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION  3.13)
 
 project(Open3DStreamLib)
 
-find_package(flatbuffers CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../usr)
+find_package(Flatbuffers CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../usr)
 find_package(nng CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../usr)
 
 add_custom_command(
@@ -94,7 +94,7 @@ add_library(o3dsnet  STATIC ${net_sources} ${net_headers})
 target_include_directories(o3dscore PUBLIC 
 	${CMAKE_CURRENT_BINARY_DIR}/_generated 
 	${CMAKE_CURRENT_LIST_DIR}/../usr/include
-	${CMAKE_CURRENT_LIST_DIR}/../thirdparty/Eigen
+	${CMAKE_CURRENT_LIST_DIR}/../thirdparty/eigen
 	${CMAKE_CURRENT_LIST_DIR}/../thirdparty/crccpp/inc
 	${CMAKE_CURRENT_LIST_DIR} 
 )

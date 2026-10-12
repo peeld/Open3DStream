@@ -81,3 +81,7 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Third-party and install output from build.sh
+usr/
+thirdparty/build/
