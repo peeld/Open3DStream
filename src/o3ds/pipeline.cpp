@@ -50,21 +50,76 @@ namespace O3DS
 		return true;
 	}
 
-	bool PipelinePull::start(const char *url)
+	bool PipelinePull::open()
 	{
-		int ret;
-
-		ret = nng_pull0_open(&mSocket);
+		int ret = nng_pull0_open(&mSocket);
 		if (ret != 0)
 		{
-			setError("Could not create pull socket for listen", ret);
+			setError("Could not create pull socket", ret);
 			return false;
 		}
 
-		ret = nng_listen(mSocket, url, NULL, 0);
+		return true;
+	}
+
+	bool PipelinePull::start(const char *url)
+	{
+		if (!open())
+		{
+			return false;
+		}
+
+		return startListener(url, nullptr);
+	}
+
+	bool PipelinePull::startListener(const char* url, nng_tls_config* tlsConfig)
+	{
+		int ret;
+
+		ret = nng_listener_create(&mListenerHandle, mSocket, url);
 		if (ret != 0)
 		{
-			setError("Could not listen on pull connection", ret);
+			setError("Could not create pull listener", ret);
+			return false;
+		}
+
+		if (tlsConfig != nullptr)
+		{
+			ret = nng_listener_set_ptr(mListenerHandle, NNG_OPT_TLS_CONFIG, tlsConfig);
+			if (ret != 0)
+			{
+				setError("Could not attach TLS config to pull listener", ret);
+				return false;
+			}
+		}
+
+		ret = nng_listener_start(mListenerHandle, 0);
+		if (ret != 0)
+		{
+			setError("Could not start pull listener", ret);
+			return false;
+		}
+
+		mHasListener = true;
+		return true;
+	}
+
+	void PipelinePull::closeListener()
+	{
+		if (mHasListener)
+		{
+			nng_listener_close(mListenerHandle);
+			mListenerHandle = NNG_LISTENER_INITIALIZER;
+			mHasListener = false;
+		}
+	}
+
+	bool PipelinePull::notifyPipeEvent(nng_pipe_ev event, nng_pipe_cb callback, void* context)
+	{
+		int ret = nng_pipe_notify(mSocket, event, callback, context);
+		if (ret != 0)
+		{
+			setError("Could not register pipe notify callback", ret);
 			return false;
 		}
 
