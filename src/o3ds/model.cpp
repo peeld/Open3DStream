@@ -1151,6 +1151,37 @@ namespace O3DS
 		return true;
 	}
 
+	bool SubjectList::serializeRoster(std::vector<char>& outbuf, const std::string& senderId)
+	{
+		flatbuffers::FlatBufferBuilder builder;
+
+		std::vector<flatbuffers::Offset<O3DS::Data::RosterEntry>> entries;
+		for (const auto& subject : mItems)
+		{
+			if (!subject->mEnabled)
+				continue;
+			auto uuid = builder.CreateString(subject->mUuid);
+			auto name = builder.CreateString(subject->mName);
+			entries.push_back(O3DS::Data::CreateRosterEntry(builder, uuid, name));
+		}
+
+		auto oRoster = builder.CreateVector(entries);
+		auto oSender = builder.CreateString(senderId);
+
+		O3DS::Data::SubjectListBuilder b(builder);
+		b.add_x_axis(dir(mContext.mX));
+		b.add_y_axis(dir(mContext.mY));
+		b.add_z_axis(dir(mContext.mZ));
+		b.add_distance_unit(distUnit(mContext.mDistance));
+		b.add_roster_version(1);
+		b.add_sender_id(oSender);
+		b.add_roster(oRoster);
+		builder.Finish(b.Finish());
+
+		finalize(builder, outbuf, 1);
+		return true;
+	}
+
 	bool SubjectList::serializeUpdate(std::vector<char>& outbuf, size_t& count, double timestamp, const std::string& timecode)
 	{		
 		count = 0;
@@ -1221,6 +1252,9 @@ namespace O3DS
 		// Cleared before anything can fail, so a rejected packet reports that it
 		// carried nothing rather than the previous packet's subjects.
 		mPacketUuids.clear();
+		mRosterVersion = 0;
+		mRosterSender.clear();
+		mRoster.clear();
 
 		if (data == nullptr) {
 			mError = "Nullptr passed as data to parse";
@@ -1308,6 +1342,23 @@ namespace O3DS
 			env.dropFrame        = root->drop_frame();
 			env.rateNum          = root->rate_num();
 			env.rateDen          = root->rate_den();
+		}
+
+		if (root->roster_version() != 0)
+		{
+			mRosterVersion = root->roster_version();
+			mRosterSender = root->sender_id() ? root->sender_id()->str() : std::string();
+			if (auto roster = root->roster())
+			{
+				mRoster.reserve(roster->size());
+				for (uint32_t i = 0; i < roster->size(); i++)
+				{
+					auto entry = roster->Get(i);
+					mRoster.push_back({
+						entry->uuid() ? entry->uuid()->str() : std::string(),
+						entry->name() ? entry->name()->str() : std::string() });
+				}
+			}
 		}
 
 		auto performers_data = root->performers();

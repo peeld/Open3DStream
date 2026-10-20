@@ -572,6 +572,29 @@ namespace O3DS
 		//! parse.
 		std::unordered_set<std::string> mPacketUuids;
 
+		//! One subject a sender's roster lists (o3ds.fbs SubjectList.roster).
+		struct RosterEntry
+		{
+			std::string uuid;
+			std::string name;
+		};
+
+		//! The roster the last parse() carried: mRosterVersion is 0 when the
+		//! packet had none (every data packet), and then mRosterSender and
+		//! mRoster are empty. A roster lists every subject the sender is
+		//! sending, quiet or not - the authority list a receiver needs before
+		//! it can tell "removed" from "not streaming right now". Cleared at the
+		//! top of every parse(), like mPacketUuids.
+		std::uint8_t             mRosterVersion = 0;
+		std::string              mRosterSender;
+		std::vector<RosterEntry> mRoster;
+
+		//! Encode a roster packet: the uuid and name of every ENABLED subject,
+		//! under 'senderId', which a receiver keeps one roster per. It carries
+		//! the coordinate context but no subjects and no sample time - it is a
+		//! statement about membership, not data.
+		[[nodiscard]] bool serializeRoster(std::vector<char>& outbuf, const std::string& senderId);
+
 		//! Encode all of the items in the subject list as binary data
 		[[nodiscard]] bool serialize(std::vector<char> &outbuf, double timestamp=0.0, const std::string& timcode = std::string());
 

@@ -127,6 +127,14 @@ table CameraUpdate {
   aperture:float;         // f-stop
 }
 
+// --- Roster --------------------------------------------------------------------
+// One subject a sender's roster lists. See SubjectList.roster.
+
+table RosterEntry {
+  uuid:string;
+  name:string;
+}
+
 // --- Root packet -------------------------------------------------------------
 // A single SubjectList packet may contain full definitions, per-frame updates,
 // or both. Senders should populate only the arrays relevant to each packet.
@@ -216,6 +224,24 @@ table SubjectList {
   drop_frame:bool;
   rate_num:int;            // exact rational rate, so a receiver with a
   rate_den:int;            // different rate table can still reconstruct it
+
+  // --- Roster ----------------------------------------------------------------
+  //
+  // A sender's authority list: every subject it is sending right now, whether
+  // or not that subject has a sample this tick. A sender that puts one subject
+  // per packet otherwise never says which subjects EXIST, so a receiver cannot
+  // tell a subject the sender removed from one that is merely quiet (tracking
+  // lost, sender stalled) - and only the first should ever be deleted.
+  //
+  // A roster packet carries no subjects and no sample time: it is a statement
+  // about membership, not data. An empty roster with roster_version != 0 means
+  // "this sender is sending nothing". Read the fields only when
+  // roster_version != 0; a receiver built before them ignores the packet (it
+  // carries no subjects). Appended, like the time envelope.
+
+  roster_version:ubyte;    // 0 = this packet carries no roster
+  sender_id:string;        // the sending instance; a receiver keeps one roster per sender
+  roster:[RosterEntry];
 }
 
 root_type SubjectList;
