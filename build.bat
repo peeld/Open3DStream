@@ -39,5 +39,3 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 cd %~DP0
 
-python package.py
-

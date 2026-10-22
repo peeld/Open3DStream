@@ -1,58 +1,51 @@
-SET(CMAKE_MIN_REQ_VERSION 3.13)
-cmake_minimum_required(VERSION ${CMAKE_MIN_REQ_VERSION})
+cmake_minimum_required(VERSION 3.13)
 
 project(FbxStream)
 
-find_package(nng CONFIG REQUIRED)
-
-if (UNIX)
-	if(NOT DEFINED fbxroot)
-	set(fbxroot /home/ec2-user/fbxsdk)
-	endif()
-	set(xtralibs fbxsdk xml2)
-	if(CMAKE_BUILD_TYPE MATCHES Release OR CMAKE_BUILD_TYPE STREQUAL "")
-	link_directories(${fbxroot}/lib/gcc/x64/release/)
-	#install(FILES
-	#		${fbxroot}/lib/gcc4/x64/release/libfbxsdk.a
-	#		${fbxroot}/lib/gcc4/x64/release/libfbxsdk.so
-	#		DESTINATION /usr/local/lib64/)
-	endif()
-	if(CMAKE_BUILD_TYPE MATCHES Debug)
-	link_directories(${fbxroot}/lib/gcc/x64/debug/)
-	endif()
-endif()
+# Streams an fbx file on a loop - useful for testing connectivity.
+# Needs the Autodesk FBX SDK. Point FBX_SDK_ROOT at the install if it is not
+# in one of the default locations; FbxStream is skipped if it is not found.
 
 if(WIN32)
-	set(fbxroot "C:/Program Files/Autodesk/FBX/FBX SDK/2020.0.1") 
+	set(_fbx_default "C:/Program Files/Autodesk/FBX/FBX SDK/2020.0.1")
+else()
+	set(_fbx_default "$ENV{HOME}/fbxsdk")
+endif()
+set(FBX_SDK_ROOT "${_fbx_default}" CACHE PATH "Autodesk FBX SDK install directory")
 
-	# As we are adding full paths to the debug/release fbx libs, we need to set the CMP0003 policy
-	set(xtralibs 
-		debug ${fbxroot}/lib/vs2017/x64/debug/libfbxsdk.lib  
-		optimized ${fbxroot}/lib/vs2017/x64/release/libfbxsdk.lib 
-	)
+find_path(FBX_SDK_INCLUDE_DIR fbxsdk.h HINTS ${FBX_SDK_ROOT}/include NO_DEFAULT_PATH)
+find_library(FBX_SDK_LIBRARY NAMES libfbxsdk fbxsdk
+	HINTS
+		${FBX_SDK_ROOT}/lib/gcc/x64/release
+		${FBX_SDK_ROOT}/lib/vs2017/x64/release
+		${FBX_SDK_ROOT}/lib/vs2019/x64/release
+		${FBX_SDK_ROOT}/lib/vs2022/x64/release
+	NO_DEFAULT_PATH)
+
+if(NOT FBX_SDK_INCLUDE_DIR OR NOT FBX_SDK_LIBRARY)
+	message(STATUS "FBX SDK not found in FBX_SDK_ROOT (${FBX_SDK_ROOT}) - skipping FbxStream")
+	return()
 endif()
 
-include_directories(${fbxroot}/include)
+find_package(nng CONFIG REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/../../usr)
 
 add_executable(FbxStream main.cpp fbxloader.cpp fbxloader.h)
 
-target_link_libraries(FbxStream open3dstreamstatic ${NNG_LIBRARY} ${xtralibs})
-
-if(WIN32)
-
-add_custom_command(TARGET FbxStream POST_BUILD       
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different   
-        ${fbxroot}/lib/vs2017/x64/$<$<CONFIG:RelWithDebInfo>:Release>$<$<NOT:$<CONFIG:RelWithDebInfo>>:$<CONFIG>>/libfbxsdk.dll     
-        $<TARGET_FILE_DIR:FbxStream>)   
-
-# https://cmake.org/cmake/help/git-stage/prop_tgt/VS_DEBUGGER_COMMAND_ARGUMENTS.html
-# https://stackoverflow.com/questions/52649753/how-to-send-visual-studio-configuration-options-from-cmake
-set_target_properties(FbxStream PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "${CMAKE_CURRENT_LIST_DIR}/../../test_data/beta_fight.fbx tcp://127.0.0.1:3001")
-
-install(TARGETS FbxStream DESTINATION bin OPTIONAL)
-install(FILES ${fbxroot}/lib/vs2017/x64/$<$<CONFIG:RelWithDebInfo>:Release>$<$<NOT:$<CONFIG:RelWithDebInfo>>:$<CONFIG>>/libfbxsdk.dll DESTINATION bin OPTIONAL)
-
+target_include_directories(FbxStream PRIVATE ${FBX_SDK_INCLUDE_DIR})
+target_link_libraries(FbxStream PRIVATE o3dsnet o3dscore nng::nng ${FBX_SDK_LIBRARY})
+if(UNIX)
+	target_link_libraries(FbxStream PRIVATE xml2)
 endif()
 
-# install(TARGETS FbxStream DESTINATION ${CMAKE_CURRENT_LIST_DIR}/../../bin)
+if(WIN32)
+	# Ship the fbx sdk dll alongside the exe
+	get_filename_component(_fbx_libdir ${FBX_SDK_LIBRARY} DIRECTORY)
+	add_custom_command(TARGET FbxStream POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_fbx_libdir}/libfbxsdk.dll $<TARGET_FILE_DIR:FbxStream>)
+	install(FILES ${_fbx_libdir}/libfbxsdk.dll DESTINATION bin OPTIONAL)
 
+	set_target_properties(FbxStream PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS
+		"${CMAKE_CURRENT_LIST_DIR}/../../test_data/beta_fight.fbx tcp://127.0.0.1:3001")
+endif()
+
+install(TARGETS FbxStream DESTINATION bin)
