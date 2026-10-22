@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "fbxloader.h"
-#include "o3ds/o3ds.h"
+#include "o3ds/o3ds_version.h"
 #include "o3ds/model.h"
 #include "o3ds/getTime.h"
 
@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[])
 {
-	printf("Open3DStream v%s\n", O3DS::version);
+	printf("Open3DStream v%s\n", O3DS::getVersion());
 
 	if(argc != 3)
 	{

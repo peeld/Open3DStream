@@ -42,7 +42,6 @@ set(net_headers
 	o3ds/udp.h
 	o3ds/socket_address.h
 	o3ds/binary_stream.h
-	# o3ds/xsens_parser.h
 )	
 
 set(core_sources 
@@ -74,8 +73,6 @@ set(net_sources
 	o3ds/udp.cpp
 	o3ds/socket_address.cpp
 	o3ds/binary_stream.cpp
-	# o3ds/xsens_parser.cpp	
-
 )
 	
 if(WIN32)

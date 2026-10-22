@@ -10,6 +10,3 @@ add_subdirectory(flatbuffers)
 set(NNG_ENABLE_TLS ON CACHE BOOL "" FORCE)
 add_subdirectory(nng)
 add_subdirectory(crccpp)
-
-set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
-add_subdirectory(nlohmann_json)

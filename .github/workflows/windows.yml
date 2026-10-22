@@ -56,13 +56,6 @@ jobs:
           cmake --build build --config Release && cmake --install build
         shell: cmd          
 
-      - name: CML
-        working-directory: thirdparty/cml
-        run: |
-          cmake -S . -B build -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%/usr
-          cmake --build build --config Release && cmake --install build
-        shell: cmd
-
       - name: CRC
         working-directory: thirdparty/crccpp
         run: |

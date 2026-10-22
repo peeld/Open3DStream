@@ -52,12 +52,6 @@ int main(int argc, char *argv[])
 		printf("Connecting to: %s\n", argv[2]);
 		connector = new O3DS::ServerPair();
 	}
-	
-	//if (strcmp(argv[1], "ws") == 0)
-	//{
-		//printf("Connecting to: %s\n", argv[2]);
-		//connector = new O3DS::WebsocketClient();
-	//}
 
 	if (!connector)
 	{
