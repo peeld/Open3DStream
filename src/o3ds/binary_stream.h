@@ -34,7 +34,7 @@ SOFTWARE.
 namespace O3DS
 {
 	inline uint64_t swap(uint64_t v) {
-#if _WIN32
+#ifdef _WIN32
 		return _byteswap_uint64(v);
 #else
 		return __builtin_bswap64(v);
@@ -42,7 +42,7 @@ namespace O3DS
 	}
 
 	inline uint32_t swap(uint32_t v) {
-#if _WIN32
+#ifdef _WIN32
 		return _byteswap_ulong(v);
 #else
 		return __builtin_bswap32(v);
@@ -50,7 +50,7 @@ namespace O3DS
 	}
 
 	inline uint16_t swap(uint16_t v) {
-#if _WIN32
+#ifdef _WIN32
 		return _byteswap_ushort(v);
 #else
 		return __builtin_bswap16(v);

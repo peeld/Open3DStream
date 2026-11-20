@@ -517,8 +517,8 @@ namespace O3DS
 
 	Subject::Subject(const std::string& name, const std::string& uuid, void* ref)
 		: mName(name)
-		, mReference(ref)
 		, mUuid(uuid)
+		, mReference(ref)
 		, mEnabled(true)
 	{}
 
